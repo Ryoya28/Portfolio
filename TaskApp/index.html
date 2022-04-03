@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang = ja>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jkanban@1.3.1/dist/jkanban.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/jkanban@1.3.1/dist/jkanban.min.js"></script>
+  <style>
+    #download{
+      display: none;
+      width: 100px;
+      margin: 15px;
+      text-align: center;
+      border: 1px solid #aaa;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <form name="wrap">
+    <input type="button" name="new" value="新規作成"/>
+    <input type="file" name="import"/>
+  </form>
+  <a id="downlord" download="sample.json">ダウンロード</a>
+
+  <div id="kanban"></div>
+
+  <script>
+    let data = [
+      {id:'board-0', title:'タスク'},
+      {id:'board-1', title:'進行中'},
+      {id:'board-2', title:'完了'}
+    ];
+    let taskid = 0;
+    let kanban;
+
+    document.forms.wrap.new.addEventListener('click',createKanban);
+    document.forms.wrap.import.addEventListener('change',importFile);
+    document.getElementById('download').addEventListener('click',downloadJSON);
+
+    function createKanban(){
+      kanban = new jKanban({
+        element: '#kanban',
+        boards: data,
+        itemAddOptions:{
+          enabled:true,
+          content:'追加'
+        },
+        click: element => kanban.removeElement(element.dataset.eid),
+        buttonClick:(element, id) => addTask(id)
+      });
+
+      idCheck(data);
+
+      document.forms.wrap.style.display = 'none';
+      document.getElementById('download').style.display = 'block';
+    }
+
+    function idCheck(data){
+      data.forEach(list => {
+        if(!list.item) return;
+
+        taskid += list.item.length;
+      })
+    }
+
+    function importFile(event){
+      const reader = new FileReader();
+      reader.readAsText(event.target.files[0])
+      reader.onload = () => {
+        data = JSON.parse(reader.result);
+        createKanban();
+      }
+    }
+
+    function downloadJSON(){
+      //バイナリデータへ変換
+      const blobData = new Blob([JSON.stringify(createDATA())],{type:'application/json'});
+
+      document.getElementById('download').href = window.URL.createObjectURL(blobData);
+    }
+
+    function createDATA(){
+      const jkanbanData = [];
+
+      for(let i=0; i<data.length; i++){
+        const boardLists = {
+          id: data[i].id,
+          title:data[i].title,
+          item:[]
+        }
+
+        kanban.getBoradElements(data[i].id).forEach(item => {
+          boardLists.item.push({
+            id: item.dataset.eid,
+            title: item.textContent
+          });
+        })
+        jkanbanData.push(boardLists);
+      }
+      return jkanbanData;
+    }
+
+    function addTask(id){
+      const task = document.createElement('input');
+
+      kanban.addForm(id, task);
+      task.focus();
+
+      task.addEventListener('blur', e => {
+        kanban.addElement(id, {id:`item-${taskid++}`, title:e.target.value});//$は何の意味？JSONって何だ？
+        task.remove();
+      })
+    }
+
+  </script>
+
+</body>
+
+</html>
+
+
+
+
+
+
+
